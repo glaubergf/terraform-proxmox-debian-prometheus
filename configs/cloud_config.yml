@@ -1,0 +1,91 @@
+#cloud-config
+
+# Atualizar os índices dos pacotes e atualizar os pacotes.
+package_update: true
+package_upgrade: true
+
+# Executar no boot apenas uma vez com o 'cloud-init-per'.
+bootcmd: 
+  - [ cloud-init-per, once, aptdistupgrade, apt-get, dist-upgrade, -y ]
+
+# Instalar Pacotes
+packages:
+  - prometheus
+  - prometheus-node-exporter
+  - qemu-guest-agent
+  - openssh-server
+  - openssh-client
+  - ethstatus
+  - s-tui
+  - lm-sensors
+  - neofetch
+  - dnsutils
+  - net-tools
+  - htop
+
+# Configurar o usuário
+users:
+  - name: ${user}
+    #password: ${password}
+    home: /home/${user}
+    groups: users, admin, sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+    - ${ssh_key}
+
+# Definir e gerenciar senhas dos usuários na inicialização.
+chpasswd:
+  list: |
+    root:!
+    ${user}:${password}
+  expire: false
+
+# Desabilitar senha, usar apenas SSH para login.
+lock_passwd: false
+
+# Habilitar o SSH.
+ssh_pwauth: true
+
+# Desabilitar acesso root via senha.
+disable_root: true
+
+# Permitir alterar o hostname da VM durante a inicialização.
+preserve_hostname: false
+
+# Impedir alterações no arquivo /etc/hosts da VM.
+manage_etc_hosts: false
+
+# Definir o FQDN (Fully Qualified Domain Name) da VM.
+fqdn: ${hostname}.${domain}
+
+# Controlar o comportamento do sistema (reiniciar) após a execução do cloud-init.
+power_state:
+  delay: now
+  mode: reboot
+  message: Rebooting after cloud-init completion
+  condition: true
+
+# Configurar timezone.
+timezone: America/Sao_Paulo
+
+# Executar comandos shell ou scripts durante a inicialização sequencialmente.
+runcmd:
+  # Setar hosts
+  - echo 192.168.0.1 gw.homelab.mcn >> /etc/hosts
+  # Definir hostname
+  - echo "${hostname}.${domain}" > /etc/hostname
+  # Limpar o arquivo de configuração de rede default criado pelo cloud-init
+  - sleep 10
+  - sudo rm -f /etc/netplan/90-default.yaml
+  # Aplicar configurações de rede baseado no arquivo '50-cloud-init.yaml'
+  # renderizado do arquivo 'network_config.yml'
+  - sudo netplan generate
+  - sudo netplan apply
+  # Permitir usuário, habilitar e iniciar o Prometheus/Prometheus-Node-Exporter
+  - sudo chown -R prometheus:prometheus /var/lib/prometheus
+  - sudo chown -R prometheus:prometheus /etc/prometheus
+  - sudo systemctl enable prometheus
+  - sudo systemctl enable prometheus-node-exporter
+  - sudo systemctl start prometheus
+  - sudo systemctl start prometheus-node-exporter

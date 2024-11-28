@@ -1,0 +1,16 @@
+# CONFIG .gitignore
+
+# Diretórios locais
+.terraform/
+security/
+
+# Arquivos locais
+configs/prometheus_cloud_init.cfg
+configs/prometheus_network_config.cfg
+.terraform.lock.hcl
+output.tf
+plano_prometheus
+terraform.tfstate*
+terraform.tfvars
+
+# Actions-Runner*
